@@ -7,7 +7,6 @@
 namespace at { namespace native {
 
 using namespace at::sparse;
-
 Tensor _to_csc(const IntTensor& colIndices, int64_t dim, int64_t nnz) {
     Tensor csc = at::zeros({dim + 1}, {at::requires_grad().device(at::kHAMMERBLADE).dtype(at::kFloat)});
     hb_offload_kernel(csc, colIndices, dim, nnz, "tensorlib_tocsc");
@@ -30,19 +29,19 @@ Tensor dsmm_hb(const Tensor& a_dense, const SparseTensor& b_sparse) {
   TORCH_CHECK(a_dense.size(1) == b_sparse.size(0), "Matrix multiply dimension mismatch: 'a' dim 1 = ", a_dense.size(1), ", 'b' dim 0 = ", b_sparse.size(0));
   
   IntTensor indices = b_sparse._indices();
-  if (!(indices.dtype() == at::kInt)) TORCH_WARN("Indices on HammerBlade should be int32");
+  // TORCH_CHECK(indices.dtype() == at::kLong, "Indices on HammerBlade should be int32, but got ", indices.dtype());
   IntTensor colIndices = indices.select(0, 1);
-  if (!colIndices.is_hammerblade()) TORCH_WARN("colIndices show be HammerBlade Tensor");
-  int64_t dim = b_sparse.dim();
-  int64_t b_nnz = b_sparse._nnz();
-  
-  Tensor b_csc = _to_csc(colIndices, dim, b_nnz);
+  TORCH_CHECK(colIndices.is_hammerblade(), "colIndices must be HammerBlade Tensor");
+  IntTensor rowIndices = indices.select(0, 0);
+  TORCH_CHECK(rowIndices.is_hammerblade(), "rowIndices must be HammerBlade Tensor");
 
   Tensor result = at::zeros({a_dense.size(0), b_sparse.size(1)}, {at::requires_grad().device(at::kHAMMERBLADE).dtype(at::kFloat)});
-
   int64_t dot_prod_len = a_dense.size(1);
+  int64_t b_nnz = b_sparse._nnz();
+  int64_t b_dim = b_sparse.dim();
+  Tensor b_csc = _to_csc(colIndices, b_dim, b_nnz);
 
-  hb_offload_kernel(result, a_dense, b_csc, dot_prod_len, b_nnz, "tensorlib_dsmm");
+  hb_offload_kernel(result, a_dense, b_csc, rowIndices, colIndices, dot_prod_len, b_nnz, "tensorlib_dsmm");
   return result;
 }
    
