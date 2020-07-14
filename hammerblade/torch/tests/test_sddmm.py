@@ -35,11 +35,19 @@ def _test_torch_sddmm(a, b, c):
 
 
 def test_torch_sddmm_1():
-    a = torch.Tensor([[1, 0], [0, 3]]).to_sparse()
+    a = torch.Tensor([[1, 0, 1], [0, 3, 0]]).to_sparse()
+    b = torch.Tensor([[5, 3], [1, 7]])
+    c = torch.Tensor([[1, 2, 1], [2, 1, 1]])
+    _test_torch_sddmm(a, b, c)
+
+def test_torch_sddmm_2():
+    a = torch.Tensor([[0, 0], [0, 0]]).to_sparse()
     b = torch.Tensor([[5, 3], [1, 7]])
     c = torch.Tensor([[1, 2], [2, 1]])
     _test_torch_sddmm(a, b, c)
 
-# def test_torch_sddmm_2():
-#     x = torch.randn(2, 3)
-#     _test_torch_sddmm(x)
+def test_torch_sddmm_3():
+    a = torch.Tensor([[1, 1], [1, 1]]).to_sparse()
+    b = torch.Tensor([[5, 3], [1, 7]])
+    c = torch.Tensor([[1, 2], [2, 1]])
+    _test_torch_sddmm(a, b, c)
